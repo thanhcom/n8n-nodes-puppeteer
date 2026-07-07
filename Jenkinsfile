@@ -103,7 +103,7 @@ pipeline {
                             OLD_TAGS=\$(docker images ${IMAGE_NAME} --format "{{.Tag}}" \\
                                 | grep -v latest \\
                                 | sort -r \\
-                                | tail -n +1)
+                                | tail -n +2)
 
                             for TAG in \$OLD_TAGS; do
                                 docker rmi ${IMAGE_NAME}:\$TAG || true
