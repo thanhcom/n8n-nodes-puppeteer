@@ -7,15 +7,14 @@ pipeline {
         CONTAINER_NAME = "n8n"
 
         REMOTE_USER = "thanhcom"
-        REMOTE_HOST = "100.110.107.62"
+        REMOTE_HOST = "100.72.72.26"
     }
 
     stages {
         stage('Checkout Code') {
             steps {
                 git url: 'https://github.com/thanhcom/n8n-nodes-puppeteer.git',
-                    credentialsId: '61c6e6e5-6ed6-4af8-a1f0-a447351cbfb7',
-                    branch: 'master'
+                    branch: 'main'
             }
         }
 
@@ -60,7 +59,6 @@ pipeline {
 
         stage('Deploy Container (Remote via SSH)') {
             steps {
-                // ĐÃ ĐỔI: Sử dụng ssh-remote credentials
                 sshagent(credentials: ['ssh-remote']) {
                     sh """
                         ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} '
@@ -105,7 +103,7 @@ pipeline {
                             OLD_TAGS=\$(docker images ${IMAGE_NAME} --format "{{.Tag}}" \\
                                 | grep -v latest \\
                                 | sort -r \\
-                                | tail -n +2)
+                                | tail -n +1)
 
                             for TAG in \$OLD_TAGS; do
                                 docker rmi ${IMAGE_NAME}:\$TAG || true
@@ -129,7 +127,6 @@ pipeline {
         failure {
             echo "❌ Deploy thất bại – Tự động rollback về bản :latest ổn định trước đó"
 
-            // ĐÃ ĐỔI: Sử dụng ssh-remote credentials
             sshagent(credentials: ['ssh-remote']) {
                 sh """
                     ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} '
