@@ -43,11 +43,15 @@ pipeline {
 
         stage('Trigger Portainer Deploy') {
             steps {
-                echo "🚀 Đang kích hoạt Portainer Webhook để tự động Deploy..."
-                sh """
-                    curl -X POST "$PORTAINER_WEBHOOK"
-                """
-                echo "✅ Đã gửi tín hiệu cập nhật ứng dụng tới Portainer thành công!"
+                // Đổi chuẩn theo đúng ID trong ảnh của bạn
+                withCredentials([
+                    string(credentialsId: 'PORTAINER_N8N_WEBHOOK', variable: 'PORTAINER_WEBHOOK')
+                ]) {
+                    sh '''
+                        echo "🚀 Triggering Portainer Webhook..."
+                        curl -X POST "$PORTAINER_WEBHOOK"
+                    '''
+                }
             }
         }
     }
