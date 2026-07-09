@@ -45,7 +45,7 @@ pipeline {
             steps {
                 echo "🚀 Đang kích hoạt Portainer Webhook để tự động Deploy..."
                 sh """
-                    curl -X POST "${PORTAINER_WEBHOOK}"
+                    curl -X POST "$PORTAINER_WEBHOOK"
                 """
                 echo "✅ Đã gửi tín hiệu cập nhật ứng dụng tới Portainer thành công!"
             }
