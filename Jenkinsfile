@@ -26,7 +26,7 @@ pipeline {
                         returnStdout: true
                     ).trim()
                     
-                    env.IMAGE_TAG = "build-${randomHash}"
+                    env.IMAGE_TAG = "${randomHash}"
                 }
                 echo "🎲 Generated Random Image Tag: ${IMAGE_TAG}"
             }
