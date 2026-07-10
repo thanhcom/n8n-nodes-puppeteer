@@ -96,7 +96,7 @@ pipeline {
                         ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} '
                             echo "🧹 Dọn dẹp các bản build cũ..."
 
-                            OLD_TAGS=$(docker images '${IMAGE_NAME}' --format "{{.Tag}}" | grep "^build-" | tail -n +3)
+                            OLD_TAGS=$(docker images '${IMAGE_NAME}' --format "{{.Tag}}" | grep "^build-" | tail -n +2)
 
                             for TAG in $OLD_TAGS; do
                                 docker rmi '${IMAGE_NAME}':$TAG || true
