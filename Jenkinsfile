@@ -20,7 +20,6 @@ pipeline {
         stage('Prepare Random Tag') {
             steps {
                 script {
-                    // Sinh chuỗi ngẫu nhiên 8 ký tự làm tag để tránh trùng lặp
                     def randomHash = sh(
                         script: "cat /dev/urandom | tr -dc 'a-z0-9' | fold -w 8 | head -n 1",
                         returnStdout: true
@@ -41,7 +40,6 @@ pipeline {
                         passwordVariable: 'DOCKER_PASS'
                     )
                 ]) {
-                    // Dùng nháy đơn để an toàn, bảo mật biến pass của DockerHub
                     sh '''
                         docker build --pull -t ${IMAGE_NAME}:${IMAGE_TAG} .
                         docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest
@@ -52,18 +50,27 @@ pipeline {
                     '''
                 }
             }
+            // 👇 THÊM BLOCK NÀY: Dọn dẹp máy Jenkins ngay khi kết thúc stage này (thành công hay thất bại cũng xóa)
+            post {
+                always {
+                    sh '''
+                        echo "🧹 Đang xóa image vừa build trên máy Jenkins để tiết kiệm dung lượng..."
+                        docker rmi ${IMAGE_NAME}:${IMAGE_TAG} || true
+                        docker rmi ${IMAGE_NAME}:latest || true
+                        docker image prune -f
+                    '''
+                }
+            }
         }
 
         stage('Deploy Container (Remote via SSH)') {
             steps {
                 sshagent(credentials: ['ssh-remote']) {
-                    // Dùng nháy đơn bao ngoài, bọc biến môi trường bằng '${IMAGE_TAG}' để pass từ Jenkins sang SSH ngon lành
                     sh '''
                         ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} "
                             set -e
                             echo '🚀 Deploying Custom n8n Container with tag: '${IMAGE_TAG}' ...'
 
-                            # Ép server kéo đúng bản tag vừa build về, không lo trơ hay cache
                             docker pull ${IMAGE_NAME}:${IMAGE_TAG}
 
                             docker stop ${CONTAINER_NAME} || true
@@ -96,7 +103,8 @@ pipeline {
                         ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} '
                             echo "🧹 Dọn dẹp các bản build cũ..."
 
-                            OLD_TAGS=$(docker images '${IMAGE_NAME}' --format "{{.Tag}}" | grep "^build-" | tail -n +2)
+                            # Sửa lại đoạn này một chút để nhận diện đúng định dạng tag ngẫu nhiên 8 ký tự của bạn
+                            OLD_TAGS=$(docker images '${IMAGE_NAME}' --format "{{.Tag}}" | grep -E "^[a-z0-9]{8}$" | tail -n +2)
 
                             for TAG in $OLD_TAGS; do
                                 docker rmi '${IMAGE_NAME}':$TAG || true
