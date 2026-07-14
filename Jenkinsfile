@@ -17,20 +17,6 @@ pipeline {
             }
         }
 
-        stage('Prepare Random Tag') {
-            steps {
-                script {
-                    def randomHash = sh(
-                        script: "cat /dev/urandom | tr -dc 'a-z0-9' | fold -w 8 | head -n 1",
-                        returnStdout: true
-                    ).trim()
-                    
-                    env.IMAGE_TAG = "${randomHash}"
-                }
-                echo "🎲 Generated Random Image Tag: ${IMAGE_TAG}"
-            }
-        }
-
         stage('Docker Build & Push') {
             steps {
                 withCredentials([
@@ -41,21 +27,17 @@ pipeline {
                     )
                 ]) {
                     sh '''
-                        docker build --pull -t ${IMAGE_NAME}:${IMAGE_TAG} .
-                        docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest
+                        docker build --pull -t ${IMAGE_NAME}:latest .
 
                         echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                        docker push ${IMAGE_NAME}:${IMAGE_TAG}
                         docker push ${IMAGE_NAME}:latest
                     '''
                 }
             }
-            // 👇 THÊM BLOCK NÀY: Dọn dẹp máy Jenkins ngay khi kết thúc stage này (thành công hay thất bại cũng xóa)
             post {
                 always {
                     sh '''
                         echo "🧹 Đang xóa image vừa build trên máy Jenkins để tiết kiệm dung lượng..."
-                        docker rmi ${IMAGE_NAME}:${IMAGE_TAG} || true
                         docker rmi ${IMAGE_NAME}:latest || true
                         docker image prune -f
                     '''
@@ -69,9 +51,9 @@ pipeline {
                     sh '''
                         ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} "
                             set -e
-                            echo '🚀 Deploying Custom n8n Container with tag: '${IMAGE_TAG}' ...'
+                            echo '🚀 Deploying Custom n8n Container with tag: latest ...'
 
-                            docker pull ${IMAGE_NAME}:${IMAGE_TAG}
+                            docker pull ${IMAGE_NAME}:latest
 
                             docker stop ${CONTAINER_NAME} || true
                             docker rm ${CONTAINER_NAME} || true
@@ -87,7 +69,7 @@ pipeline {
                                -e N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true \\
                                -e N8N_TRUST_PROXY=true \\
                                --restart always \\
-                               ${IMAGE_NAME}:${IMAGE_TAG}
+                               ${IMAGE_NAME}:latest
 
                             echo '✅ Deploy thành công lên server!'
                         "
@@ -101,16 +83,12 @@ pipeline {
                 sshagent(credentials: ['ssh-remote']) {
                     sh '''
                         ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} '
-                            echo "🧹 Dọn dẹp các bản build cũ..."
-
-                            # Sửa lại đoạn này một chút để nhận diện đúng định dạng tag ngẫu nhiên 8 ký tự của bạn
-                            OLD_TAGS=$(docker images '${IMAGE_NAME}' --format "{{.Tag}}" | grep -E "^[a-z0-9]{8}$" | tail -n +2)
-
-                            for TAG in $OLD_TAGS; do
-                                docker rmi '${IMAGE_NAME}':$TAG || true
-                            done
-
+                            echo "🧹 Dọn dẹp các image cũ (dangling) do ghi đè tag latest..."
+                            
+                            # Khi pull latest mới về, image cũ sẽ bị mất tag và chuyển thành <none>
+                            # Lệnh prune này sẽ xóa sạch các image dạng <none> đó cực kỳ an toàn
                             docker image prune -f
+                            
                             echo "✅ Đã dọn dẹp xong"
                         '
                     '''
