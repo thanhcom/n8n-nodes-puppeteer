@@ -68,6 +68,7 @@ pipeline {
                                -e WEBHOOK_URL=https://n8n.thanhtrang.online/ \\
                                -e N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true \\
                                -e N8N_TRUST_PROXY=true \\
+															 -e NODES_EXCLUDE="[]" \
                                --restart always \\
                                ${IMAGE_NAME}:latest
 
