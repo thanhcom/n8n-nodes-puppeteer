@@ -7,6 +7,9 @@ pipeline {
 
         REMOTE_USER = "thanhcom"
         REMOTE_HOST = "100.72.72.26"
+        
+        // Thư mục chứa docker-compose.yml và .env chuẩn trên server của bạn
+        REMOTE_DIR  = "/home/thanhcom/n8n" 
     }
 
     stages {
@@ -45,32 +48,21 @@ pipeline {
             }
         }
 
-        stage('Deploy Container (Remote via SSH)') {
+        stage('Deploy Container (Remote via Docker Compose)') {
             steps {
                 sshagent(credentials: ['ssh-remote']) {
                     sh '''
                         ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} "
                             set -e
-                            echo '🚀 Deploying Custom n8n Container with tag: latest ...'
+                            echo '🚀 Updating and deploying n8n stack via Docker Compose...'
 
-                            docker pull ${IMAGE_NAME}:latest
+                            cd ${REMOTE_DIR}
 
-                            docker stop ${CONTAINER_NAME} || true
-                            docker rm ${CONTAINER_NAME} || true
+                            # Pull image mới nhất từ DockerHub
+                            docker compose pull n8n
 
-                            docker run -d --name ${CONTAINER_NAME} \\
-                               -v n8n_data:/home/node/.n8n \\
-                               -p 678:5678 \\
-                               -e GENERIC_TIMEZONE='Asia/Ho_Chi_Minh' \\
-                               -e TZ='Asia/Ho_Chi_Minh' \\
-                               -e N8N_SECURE_COOKIE=false \\
-                               -e N8N_HOST=n8n.thanhtrang.online \\
-                               -e WEBHOOK_URL=https://n8n.thanhtrang.online/ \\
-                               -e N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true \\
-                               -e N8N_TRUST_PROXY=true \\
-															 -e NODES_EXCLUDE="[]" \
-                               --restart always \\
-                               ${IMAGE_NAME}:latest
+                            # Khởi động lại service n8n bằng docker compose up -d
+                            docker compose up -d --no-deps n8n
 
                             echo '✅ Deploy thành công lên server!'
                         "
@@ -84,12 +76,8 @@ pipeline {
                 sshagent(credentials: ['ssh-remote']) {
                     sh '''
                         ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} '
-                            echo "🧹 Dọn dẹp các image cũ (dangling) do ghi đè tag latest..."
-                            
-                            # Khi pull latest mới về, image cũ sẽ bị mất tag và chuyển thành <none>
-                            # Lệnh prune này sẽ xóa sạch các image dạng <none> đó cực kỳ an toàn
+                            echo "🧹 Dọn dẹp các image cũ (dangling) trên server..."
                             docker image prune -f
-                            
                             echo "✅ Đã dọn dẹp xong"
                         '
                     '''
