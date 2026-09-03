@@ -11,8 +11,11 @@ RUN ARCH=$(uname -m) && \
 	-U --allow-untrusted add apk-tools && \
 	rm -rf sbin apk-tools-static-*.apk
 
-# Install Chrome dependencies and Chrome
+# Thêm python3, make, g++ vào đây để hỗ trợ node-gyp biên dịch các native module (như isolated-vm)
 RUN apk add --no-cache \
+	python3 \
+	make \
+	g++ \
 	chromium \
 	nss \
 	glib \
