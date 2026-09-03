@@ -2,20 +2,11 @@ FROM n8nio/n8n:latest
 
 USER root
 
-RUN ARCH=$(uname -m) && \
-	wget -qO- "http://dl-cdn.alpinelinux.org/alpine/latest-stable/main/${ARCH}/" | \
-	grep -o 'href="apk-tools-static-[^"]*\.apk"' | head -1 | cut -d'"' -f2 | \
-	xargs -I {} wget -q "http://dl-cdn.alpinelinux.org/alpine/latest-stable/main/${ARCH}/{}" && \
-	tar -xzf apk-tools-static-*.apk && \
-	./sbin/apk.static -X http://dl-cdn.alpinelinux.org/alpine/latest-stable/main \
-	-U --allow-untrusted add apk-tools && \
-	rm -rf sbin apk-tools-static-*.apk
-
-# Cài đặt công cụ build (python3, make, g++) để hỗ trợ node-gyp biên dịch native module
-RUN apk add --no-cache python3 make g++
-
-# Install Chrome dependencies and Chrome
+# Cài đặt trực tiếp python3, make, g++ và các dependencies cho Chromium
 RUN apk add --no-cache \
+	python3 \
+	make \
+	g++ \
 	chromium \
 	nss \
 	glib \
