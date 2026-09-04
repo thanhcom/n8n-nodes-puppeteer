@@ -75,7 +75,9 @@ RUN apk add --no-cache \
     ttf-freefont \
     udev \
     ttf-liberation \
-    font-noto-emoji
+    font-noto-emoji \
+    python3 \
+    py3-pip
 
 
 # ---------------------------------------------------------
